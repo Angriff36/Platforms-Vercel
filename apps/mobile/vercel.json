@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd ../.. && pnpm turbo build --filter=@hq-operations/mobile",
+  "outputDirectory": "dist",
+  "framework": "other",
+  "installCommand": "pnpm install"
+}
