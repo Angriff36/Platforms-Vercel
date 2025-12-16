@@ -1,0 +1,10 @@
+{
+  "name": "@hq-operations/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "expo start",
+    "build": "expo build"
+  },
+  "dependencies": {}
+}

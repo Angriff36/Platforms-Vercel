@@ -88,3 +88,5 @@ For custom domains, make sure to:
 
 1. Add your root domain to Vercel
 2. Set up a wildcard DNS record (`*.yourdomain.com`) on Vercel
+
+> See `DEPLOYING_TO_VERCEL.md` for a step-by-step guide and the required environment variable list. Use `.env.example` as a reference for which env keys to add in Vercel (do not commit real secrets).

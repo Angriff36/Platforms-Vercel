@@ -1,0 +1,14 @@
+name: Deploy Mobile
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install
+        run: pnpm install
+      - name: Build
+        run: pnpm turbo build --filter=@hq-operations/mobile

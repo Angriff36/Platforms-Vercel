@@ -1,0 +1,25 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install pnpm
+        run: npm i -g pnpm@latest
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: TypeCheck
+        run: pnpm -w -r tsc --noEmit
+      - name: Turbo build (filtered)
+        run: pnpm turbo build --filter=@hq-operations/web --filter=@hq-operations/api --filter=@hq-operations/mobile
+      - name: Lint
+        run: pnpm -w run lint --if-present
