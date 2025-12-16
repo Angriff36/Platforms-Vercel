@@ -53,15 +53,45 @@ jobs:
           ls -la
           echo "Using vercel.json:"
           cat vercel.json || true
-          npx vercel build --local-config vercel.json
-          # Workaround: create nested path the CLI wrongly expects (apps/web/apps/web/.next)
+          # vercel build moved below (see nested-path workaround)
+          # Workaround: make sure the CLI has the prebuilt files at the nested path it expects
+          NESTED_DIR="apps/web/apps/web/.next"
+          echo "Ensuring nested path exists: $NESTED_DIR"
           rm -rf apps/web/apps/web || true
-          mkdir -p apps/web/apps/web
-          # Copy .next into the nested path (workaround for CLI path expectation)
-          cp -R .next apps/web/apps/web/.next || true
-          ls -la apps/web/apps/web || true
+          mkdir -p apps/web/apps/web/.next
+          # Create placeholder so any tooling that probes for the nested .next doesn't fail early
+          touch apps/web/apps/web/.next/.placeholder || true
+
+          # Run vercel build (this will populate .next)
+          npx vercel build --local-config vercel.json
+
+          # Copy actual build outputs into the nested path (use rsync if available for correctness)
+          if command -v rsync >/dev/null 2>&1; then
+            echo "Syncing .next/ -> $NESTED_DIR/"
+            rsync -a .next/ $NESTED_DIR/
+          else
+            echo "Copying .next -> $NESTED_DIR"
+            cp -a .next $NESTED_DIR || true
+          fi
+
+          echo "Nested dir listing:"
+          ls -la $NESTED_DIR || ls -la apps/web/apps/web || true
+
+          echo "Locate any routes-manifest.json files in repo (for debugging):"
+          find . -type f -name 'routes-manifest.json' -print -exec ls -la {} \; || true
+
+          if [ -f $NESTED_DIR/routes-manifest.json ]; then
+            echo "routes-manifest found in nested path"
+          else
+            echo "routes-manifest missing in nested path; attempting to copy from .next"
+            if [ -f .next/routes-manifest.json ]; then
+              cp .next/routes-manifest.json $NESTED_DIR/ || true
+              ls -la $NESTED_DIR || true
+            fi
+          fi
+
           # Deploy the prebuilt output from the app directory (write URL to repo-root preview_url.txt)
-          npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --local-config vercel.json --yes > ../preview_url.txt
+          npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --local-config vercel.json --yes > ../preview_url.txt 2>&1 || (echo "Deploy failed; showing vercel output:"; tail -n 200 ../preview_url.txt; exit 1)
           popd
           # show captured URL for logs
           cat preview_url.txt
