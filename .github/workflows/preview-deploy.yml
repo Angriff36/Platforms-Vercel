@@ -34,12 +34,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq
           pnpm add -w -D vercel@latest || npm i -g vercel@latest
-          # Vercel CLI prints the deployment URL to stdout; capture it directly.
-          if [ -n "$VERCEL_ORG_ID" ]; then
-            npx vercel deploy --token "$VERCEL_TOKEN" --confirm --cwd apps/web --scope "$VERCEL_ORG_ID" > preview_url.txt
-          else
-            npx vercel deploy --token "$VERCEL_TOKEN" --confirm --cwd apps/web > preview_url.txt
-          fi
+          # Build the project locally with Vercel to produce .vercel/output (avoids remote pnpm install failures)
+          npx vercel build --cwd apps/web
+          # Deploy the prebuilt output and capture stdout (deployment URL)
+          npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --cwd apps/web --yes > preview_url.txt
           # show captured URL for logs
           cat preview_url.txt
       - name: Comment preview URL on PR
