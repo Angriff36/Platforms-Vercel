@@ -58,6 +58,7 @@ jobs:
           rm -rf apps/web/apps/web || true
           mkdir -p apps/web/apps/web
           ln -s ../../.next apps/web/apps/web/.next || true
+          ls -la apps/web/apps/web || true
           # Deploy the prebuilt output from the app directory (write URL to repo-root preview_url.txt)
           npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --local-config vercel.json --yes > ../preview_url.txt
           popd
