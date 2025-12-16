@@ -34,7 +34,9 @@ jobs:
 
       - name: Install tools
         run: |
-          npm i -g vercel@latest jq gh
+          sudo apt-get update
+          sudo apt-get install -y jq
+          npm i -g vercel@latest gh
 
       - id: create_web
         name: Create or link web project
@@ -44,7 +46,7 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
           echo "Creating/linking web project '$WEB_NAME'"
-          npx vercel projects create "$WEB_NAME" --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID" || true
+          npx vercel projects add "$WEB_NAME" --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID" || true
           WEB_ID=$(npx vercel projects ls --token "$VERCEL_TOKEN" --json | jq -r --arg name "$WEB_NAME" '.[] | select(.name==$name) | .id')
           echo "web_id=$WEB_ID" >> $GITHUB_OUTPUT
 
@@ -56,7 +58,7 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
           echo "Creating/linking api project '$API_NAME'"
-          npx vercel projects create "$API_NAME" --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID" || true
+          npx vercel projects add "$API_NAME" --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID" || true
           API_ID=$(npx vercel projects ls --token "$VERCEL_TOKEN" --json | jq -r --arg name "$API_NAME" '.[] | select(.name==$name) | .id')
           echo "api_id=$API_ID" >> $GITHUB_OUTPUT
 
