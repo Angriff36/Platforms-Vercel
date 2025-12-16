@@ -1,0 +1,10 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+ignoredBuiltDependencies:
+  - '@vercel/speed-insights'
+
+onlyBuiltDependencies:
+  - '@tailwindcss/oxide'
+  - sharp

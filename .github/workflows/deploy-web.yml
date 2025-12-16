@@ -1,0 +1,33 @@
+name: Deploy Web (Production via CI)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install pnpm
+        run: npm i -g pnpm@latest
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: TypeCheck
+        run: pnpm -w -r tsc --noEmit
+      - name: Build
+        run: pnpm turbo build --filter=@hq-operations/web
+      - name: Deploy to Vercel (production)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_WEB_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          # Install Vercel CLI and deploy from the project root with the app as cwd
+          pnpm add -w -D vercel@latest || npm i -g vercel@latest
+          npx vercel deploy --prebuilt --token "$VERCEL_TOKEN" --prod --confirm --cwd apps/web --scope "$VERCEL_ORG_ID" --project "$VERCEL_PROJECT_ID"

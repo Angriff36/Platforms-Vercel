@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd ../.. && pnpm turbo build --filter=@hq-operations/api",
+  "outputDirectory": "dist",
+  "framework": "node",
+  "installCommand": "pnpm install"
+}

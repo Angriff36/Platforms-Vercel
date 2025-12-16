@@ -1,0 +1,10 @@
+{
+  "name": "@hq-operations/mobile-shared",
+  "version": "0.1.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "private": false,
+  "dependencies": {
+    "@hq-operations/shared": "workspace:*"
+  }
+}

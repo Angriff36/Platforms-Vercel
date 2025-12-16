@@ -1,0 +1,42 @@
+name: PR Preview Deploy (via CI)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  preview-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install pnpm
+        run: npm i -g pnpm@latest
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm turbo build --filter=@hq-operations/web
+      - name: Deploy Preview to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          pnpm add -w -D vercel@latest || npm i -g vercel@latest
+          npx vercel deploy --token "$VERCEL_TOKEN" --confirm --cwd apps/web --scope "$VERCEL_ORG_ID" --json > preview.json
+          cat preview.json | jq -r '.url' | sed -n '1p' > preview_url.txt
+      - name: Comment preview URL on PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const url = fs.readFileSync('preview_url.txt','utf8').trim();
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Preview deployment: ${url}`
+            });
