@@ -67,16 +67,22 @@ jobs:
           WEB_ID: ${{ steps.create_web.outputs.web_id }}
           API_ID: ${{ steps.create_api.outputs.api_id }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_MGMT_TOKEN: ${{ secrets.REPO_MANAGEMENT_TOKEN }}
         run: |
           echo "Setting VERCEL_PROJECT_WEB_ID (id: $WEB_ID)"
-          # Use the system-installed gh binary to avoid npm-installed gh conflicts
-          /usr/bin/gh secret set VERCEL_PROJECT_WEB_ID --body "$WEB_ID" || true
-          echo "Checking secret list for VERCEL_PROJECT_WEB_ID"
-          /usr/bin/gh secret list | grep VERCEL_PROJECT_WEB_ID || true
-          echo "Setting VERCEL_PROJECT_API_ID (id: $API_ID)"
-          /usr/bin/gh secret set VERCEL_PROJECT_API_ID --body "$API_ID" || true
-          echo "Checking secret list for VERCEL_PROJECT_API_ID"
-          /usr/bin/gh secret list | grep VERCEL_PROJECT_API_ID || true
+          if [ -n "$REPO_MGMT_TOKEN" ]; then
+            # Use a PAT with repo admin scope to set repository secrets (GITHUB_TOKEN cannot write repo secrets)
+            GH_TOKEN="$REPO_MGMT_TOKEN" /usr/bin/gh secret set VERCEL_PROJECT_WEB_ID --body "$WEB_ID" || true
+            echo "Checking secret list for VERCEL_PROJECT_WEB_ID"
+            GH_TOKEN="$REPO_MGMT_TOKEN" /usr/bin/gh secret list | grep VERCEL_PROJECT_WEB_ID || true
+            echo "Setting VERCEL_PROJECT_API_ID (id: $API_ID)"
+            GH_TOKEN="$REPO_MGMT_TOKEN" /usr/bin/gh secret set VERCEL_PROJECT_API_ID --body "$API_ID" || true
+            echo "Checking secret list for VERCEL_PROJECT_API_ID"
+            GH_TOKEN="$REPO_MGMT_TOKEN" /usr/bin/gh secret list | grep VERCEL_PROJECT_API_ID || true
+          else
+            echo "No REPO_MANAGEMENT_TOKEN provided; skipping automatic secret creation."
+            echo "Project IDs: WEB=$WEB_ID API=$API_ID"
+          fi
 
       - name: Comment on PR (if run from a PR)
         if: github.event_name == 'workflow_dispatch' || github.event.pull_request != null
