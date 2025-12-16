@@ -34,6 +34,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq
           pnpm add -w -D vercel@latest || npm i -g vercel@latest
+          # Pull project settings so Vercel knows which project to target (creates .vercel/project)
+          if [ -n "$VERCEL_ORG_ID" ]; then
+            npx vercel pull --yes --cwd apps/web --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID"
+          else
+            npx vercel pull --yes --cwd apps/web --token "$VERCEL_TOKEN"
+          fi
           # Build the project locally with Vercel to produce .vercel/output (avoids remote pnpm install failures)
           npx vercel build --cwd apps/web
           # Deploy the prebuilt output and capture stdout (deployment URL)
