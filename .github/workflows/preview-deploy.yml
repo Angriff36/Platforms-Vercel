@@ -40,10 +40,10 @@ jobs:
           else
             npx vercel pull --yes --cwd apps/web --token "$VERCEL_TOKEN"
           fi
-          # Build the project locally with Vercel to produce .vercel/output (avoids remote pnpm install failures)
-          npx vercel build --cwd apps/web
-          # Deploy the prebuilt output and capture stdout (deployment URL)
-          npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --cwd apps/web --yes > preview_url.txt
+          # Build the project locally at repo root using the app's local config so paths are correct
+          npx vercel build --local-config apps/web/vercel.json
+          # Deploy the prebuilt output from repo root (points to the same local-config)
+          npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --local-config apps/web/vercel.json --yes > preview_url.txt
           # show captured URL for logs
           cat preview_url.txt
       - name: Comment preview URL on PR
