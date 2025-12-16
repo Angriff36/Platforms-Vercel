@@ -47,10 +47,16 @@ jobs:
           ls -la apps/web/.next || true
           echo "=== project.json ==="
           cat apps/web/.vercel/project.json || true
-          # Build the project locally in the app directory using the app's local config so paths are correct
-          npx vercel build --cwd apps/web --local-config apps/web/vercel.json
-          # Deploy the prebuilt output from the app directory (points to the same local-config)
-          npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --cwd apps/web --local-config apps/web/vercel.json --yes > preview_url.txt
+          # Build and deploy inside the app directory to avoid path duplication
+          pushd apps/web
+          echo "PWD: $(pwd)"
+          ls -la
+          echo "Using vercel.json:"
+          cat vercel.json || true
+          npx vercel build --local-config vercel.json
+          # Deploy the prebuilt output from the app directory (write URL to repo-root preview_url.txt)
+          npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --local-config vercel.json --yes > ../preview_url.txt
+          popd
           # show captured URL for logs
           cat preview_url.txt
       - name: Comment preview URL on PR
