@@ -40,10 +40,17 @@ jobs:
           else
             npx vercel pull --yes --cwd apps/web --token "$VERCEL_TOKEN"
           fi
-          # Build the project locally at repo root using the app's local config so paths are correct
-          npx vercel build --local-config apps/web/vercel.json
-          # Deploy the prebuilt output from repo root (points to the same local-config)
-          npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --local-config apps/web/vercel.json --yes > preview_url.txt
+          # Debug: show pulled settings and build outputs
+          echo "=== apps/web/.vercel ==="
+          ls -la apps/web/.vercel || true
+          echo "=== apps/web/.next ==="
+          ls -la apps/web/.next || true
+          echo "=== project.json ==="
+          cat apps/web/.vercel/project.json || true
+          # Build the project locally in the app directory using the app's local config so paths are correct
+          npx vercel build --cwd apps/web --local-config apps/web/vercel.json
+          # Deploy the prebuilt output from the app directory (points to the same local-config)
+          npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --cwd apps/web --local-config apps/web/vercel.json --yes > preview_url.txt
           # show captured URL for logs
           cat preview_url.txt
       - name: Comment preview URL on PR
