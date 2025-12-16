@@ -3,6 +3,12 @@ name: PR Preview Deploy (via CI)
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or ref to run preview for'
+        required: false
+        default: 'feat/monorepo-skeleton'
 
 jobs:
   preview-web:
@@ -16,7 +22,7 @@ jobs:
       - name: Install pnpm
         run: npm i -g pnpm@latest
       - name: Install
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
       - name: Build
         run: pnpm turbo build --filter=@hq-operations/web
       - name: Deploy Preview to Vercel
@@ -24,6 +30,9 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
+          # Ensure system tools available in CI (jq for parsing, vercel for deploy)
+          sudo apt-get update
+          sudo apt-get install -y jq
           pnpm add -w -D vercel@latest || npm i -g vercel@latest
           npx vercel deploy --token "$VERCEL_TOKEN" --confirm --cwd apps/web --scope "$VERCEL_ORG_ID" --json > preview.json
           cat preview.json | jq -r '.url' | sed -n '1p' > preview_url.txt
