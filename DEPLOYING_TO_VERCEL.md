@@ -39,6 +39,19 @@ To deploy from CI using Vercel CLI, set the following GitHub repository secrets 
 
 If you'd like PR preview deployments via CI, ensure `VERCEL_TOKEN` has preview/deploy rights. If you prefer Vercel to run builds instead of CI, you can disable these deployment workflows and enable Vercel Git integration per project.
 
+### Optional: Automate project secret creation from the workflow 🔐
+If you want the `Create Vercel Projects` workflow to automatically store discovered Vercel project IDs as repository secrets, create a GitHub Personal Access Token (PAT) and add it as the repository secret `REPO_MANAGEMENT_TOKEN`.
+
+- Create a PAT (Settings → Developer settings → Personal access tokens → Generate new token (classic)).
+  - Recommended scopes: **repo** (full control of private repositories). The token will be used by the `gh` CLI inside the workflow to set repository secrets.
+  - Optionally add **workflow** if you plan to allow the token to interact with Actions in other ways.
+- Add the token as a **Repository secret** named `REPO_MANAGEMENT_TOKEN` (Settings → Secrets → Actions).
+- Re-run the **Create Vercel Projects** workflow (Actions → Create Vercel Projects → Run workflow) on the branch/PR; the workflow will use that secret to set `VERCEL_PROJECT_WEB_ID` and `VERCEL_PROJECT_API_ID` in the repository.
+
+Security tips:
+- Use the least-privilege token you can and rotate it regularly.
+- Keep the PAT in the repository secrets store (not in any code or PRs).
+
 ## Git integration & Preview Deploys
 1. Connect your Git provider (GitHub/GitLab/Bitbucket) to Vercel.  
 2. Add the repository and configure each project to use the correct Root Directory.  
