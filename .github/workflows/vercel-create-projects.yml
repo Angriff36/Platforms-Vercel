@@ -36,6 +36,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y jq
+          # Ensure we don't accidentally invoke a Node-based npm package named "jq" which
+          # can be installed globally and masquerade as the system jq, causing Node errors.
+          npm uninstall -g jq gh || true
+          # Prefer system binaries in /usr/bin
+          export PATH=/usr/bin:$PATH
+          /usr/bin/jq --version || true
           npm i -g vercel@latest
 
       - id: create_web
@@ -47,7 +53,7 @@ jobs:
         run: |
           echo "Creating/linking web project '$WEB_NAME'"
           npx vercel projects add "$WEB_NAME" --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID" || true
-          WEB_ID=$(npx vercel projects ls --token "$VERCEL_TOKEN" --json | jq -r --arg name "$WEB_NAME" 'if (type=="array") then .[] | select(.name==$name) | .id elif has("projects") then .projects[] | select(.name==$name) | .id else empty end' || true)
+          WEB_ID=$(npx vercel projects ls --token "$VERCEL_TOKEN" --json | /usr/bin/jq -r --arg name "$WEB_NAME" 'if (type=="array") then .[] | select(.name==$name) | .id elif has("projects") then .projects[] | select(.name==$name) | .id else empty end' || true)
           echo "web_id=$WEB_ID" >> $GITHUB_OUTPUT
 
       - id: create_api
@@ -59,7 +65,7 @@ jobs:
         run: |
           echo "Creating/linking api project '$API_NAME'"
           npx vercel projects add "$API_NAME" --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID" || true
-          API_ID=$(npx vercel projects ls --token "$VERCEL_TOKEN" --json | jq -r --arg name "$API_NAME" 'if (type=="array") then .[] | select(.name==$name) | .id elif has("projects") then .projects[] | select(.name==$name) | .id else empty end' || true)
+          API_ID=$(npx vercel projects ls --token "$VERCEL_TOKEN" --json | /usr/bin/jq -r --arg name "$API_NAME" 'if (type=="array") then .[] | select(.name==$name) | .id elif has("projects") then .projects[] | select(.name==$name) | .id else empty end' || true)
           echo "api_id=$API_ID" >> $GITHUB_OUTPUT
 
       - name: Store project IDs as repository secrets
