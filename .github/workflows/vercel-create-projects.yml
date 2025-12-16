@@ -1,0 +1,89 @@
+name: Create Vercel Projects
+
+on:
+  workflow_dispatch:
+    inputs:
+      webName:
+        description: 'Name for the web project in Vercel'
+        required: false
+        default: 'platforms-web'
+      apiName:
+        description: 'Name for the api project in Vercel'
+        required: false
+        default: 'platforms-api'
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+      checks: write
+      id-token: write
+      issues: write
+      pull-requests: write
+      repository-projects: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+          npm i -g vercel@latest gh
+
+      - id: create_web
+        name: Create or link web project
+        env:
+          WEB_NAME: ${{ inputs.webName }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          echo "Creating/linking web project '$WEB_NAME'"
+          npx vercel projects add "$WEB_NAME" --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID" || true
+          WEB_ID=$(npx vercel projects ls --token "$VERCEL_TOKEN" --json | jq -r --arg name "$WEB_NAME" 'if (type=="array") then .[] | select(.name==$name) | .id elif has("projects") then .projects[] | select(.name==$name) | .id else empty end' || true)
+          echo "web_id=$WEB_ID" >> $GITHUB_OUTPUT
+
+      - id: create_api
+        name: Create or link api project
+        env:
+          API_NAME: ${{ inputs.apiName }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          echo "Creating/linking api project '$API_NAME'"
+          npx vercel projects add "$API_NAME" --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID" || true
+          API_ID=$(npx vercel projects ls --token "$VERCEL_TOKEN" --json | jq -r --arg name "$API_NAME" 'if (type=="array") then .[] | select(.name==$name) | .id elif has("projects") then .projects[] | select(.name==$name) | .id else empty end' || true)
+          echo "api_id=$API_ID" >> $GITHUB_OUTPUT
+
+      - name: Store project IDs as repository secrets
+        env:
+          WEB_ID: ${{ steps.create_web.outputs.web_id }}
+          API_ID: ${{ steps.create_api.outputs.api_id }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Setting VERCEL_PROJECT_WEB_ID (id: $WEB_ID)"
+          gh secret set VERCEL_PROJECT_WEB_ID --body "$WEB_ID"
+          echo "Setting VERCEL_PROJECT_API_ID (id: $API_ID)"
+          gh secret set VERCEL_PROJECT_API_ID --body "$API_ID"
+
+      - name: Comment on PR (if run from a PR)
+        if: github.event_name == 'workflow_dispatch' || github.event.pull_request != null
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const webId = process.env.WEB_ID || '';
+            const apiId = process.env.API_ID || '';
+            const body = `Vercel projects created/linked. Web project id: ${{ steps.create_web.outputs.web_id }}\nAPI project id: ${{ steps.create_api.outputs.api_id }}`;
+            if (context.issue && context.issue.number) {
+              github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+            } else {
+              console.log(body);
+            }
