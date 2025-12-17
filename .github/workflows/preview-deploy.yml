@@ -91,8 +91,27 @@ jobs:
           fi
 
           # Deploy the prebuilt output from the app directory (write URL to repo-root preview_url.txt)
-          npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --local-config vercel.json --yes > ../preview_url.txt 2>&1 || (echo "Deploy failed; showing vercel output:"; tail -n 200 ../preview_url.txt; exit 1)
-          popd
+          npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --local-config vercel.json --yes > ../preview_url.txt 2>&1 || DEPLOY_STATUS=$?
+
+          if [ "${DEPLOY_STATUS:-0}" -ne 0 ]; then
+            echo "App-dir deploy failed (status $DEPLOY_STATUS). Showing last 200 lines of vercel output:" || true
+            tail -n 200 ../preview_url.txt || true
+
+            echo "Trying fallback: deploy from repo root using apps/web/vercel.json"
+            popd || true
+
+            # Fallback deploy from repo root using explicit local-config path
+            npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --local-config apps/web/vercel.json --yes > preview_url_root.txt 2>&1 || (echo "Fallback deploy failed; showing last 200 lines:"; tail -n 200 preview_url_root.txt; exit 1)
+
+            echo "Fallback deploy output (last 50 lines):"
+            tail -n 50 preview_url_root.txt || true
+
+            # Move fallback output into preview_url.txt so downstream steps can read it
+            mv preview_url_root.txt preview_url.txt || true
+          else
+            popd || true
+          fi
+
           # show captured URL for logs
           cat preview_url.txt
       - name: Comment preview URL on PR
