@@ -64,15 +64,17 @@ jobs:
           # Create placeholder so any tooling that probes for the nested .next doesn't fail early
           touch apps/web/apps/web/.next/.placeholder || true
 
-          # Run vercel build (this will populate .next)
-          npx vercel build --local-config vercel.json
+          # Use the build artifacts produced by the earlier 'Build' step and copy them into the nested path
+          if [ ! -d .next ]; then
+            echo ".next directory is missing; ensure the Build step ran successfully" && exit 1
+          fi
 
           # Copy actual build outputs into the nested path (use rsync if available for correctness)
           if command -v rsync >/dev/null 2>&1; then
-            echo "Syncing .next/ -> $NESTED_DIR/"
+            echo "Syncing .next/ -> $NESTED_DIR/ (preparing prebuilt deploy)"
             rsync -a .next/ $NESTED_DIR/
           else
-            echo "Copying .next -> $NESTED_DIR"
+            echo "Copying .next -> $NESTED_DIR (preparing prebuilt deploy)"
             cp -a .next $NESTED_DIR || true
           fi
 
