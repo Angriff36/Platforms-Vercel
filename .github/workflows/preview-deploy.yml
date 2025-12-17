@@ -94,8 +94,14 @@ jobs:
             fi
           fi
 
+          # Run a local vercel build on the prepared prebuilt files so the CLI produces .vercel/output
+          echo "Running 'vercel build' to generate .vercel/output from prebuilt files"
+          npx vercel build --local-config vercel.json > ../vercel_build_output.txt 2>&1 || (echo "vercel build failed; showing last 200 lines:"; tail -n 200 ../vercel_build_output.txt; DEPLOY_STATUS=2)
+
           # Deploy the prebuilt output from the app directory (write URL to repo-root preview_url.txt)
-          npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --local-config vercel.json --yes > ../preview_url.txt 2>&1 || DEPLOY_STATUS=$?
+          if [ "${DEPLOY_STATUS:-0}" -eq 0 ]; then
+            npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --local-config vercel.json --yes > ../preview_url.txt 2>&1 || DEPLOY_STATUS=$?
+          fi
 
           if [ "${DEPLOY_STATUS:-0}" -ne 0 ]; then
             echo "App-dir deploy failed (status $DEPLOY_STATUS). Showing last 200 lines of vercel output:" || true
