@@ -103,13 +103,27 @@ jobs:
             popd || true
 
             # Fallback deploy from repo root using explicit local-config path
-            npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --local-config apps/web/vercel.json --yes > preview_url_root.txt 2>&1 || (echo "Fallback deploy failed; showing last 200 lines:"; tail -n 200 preview_url_root.txt; exit 1)
+            # Try prebuilt fallback from repo root first
+            npx vercel deploy --token "$VERCEL_TOKEN" --prebuilt --local-config apps/web/vercel.json --yes > preview_url_root.txt 2>&1 || FALLBACK_STATUS=$?
 
-            echo "Fallback deploy output (last 50 lines):"
-            tail -n 50 preview_url_root.txt || true
+            if [ "${FALLBACK_STATUS:-0}" -ne 0 ]; then
+              echo "Fallback prebuilt deploy failed (status $FALLBACK_STATUS). Showing last 200 lines of output:" || true
+              tail -n 200 preview_url_root.txt || true
 
-            # Move fallback output into preview_url.txt so downstream steps can read it
-            mv preview_url_root.txt preview_url.txt || true
+              echo "Attempting REMOTE deploy (let Vercel build remotely) using apps/web/vercel.json"
+              # Remote deploy (no --prebuilt) — allow Vercel to run the build in their environment
+              npx vercel deploy --token "$VERCEL_TOKEN" --local-config apps/web/vercel.json --yes > preview_url_remote.txt 2>&1 || (echo "Remote deploy failed; showing last 200 lines:"; tail -n 200 preview_url_remote.txt; exit 1)
+
+              echo "Remote deploy output (last 50 lines):"
+              tail -n 50 preview_url_remote.txt || true
+
+              # Use remote output for downstream steps
+              mv preview_url_remote.txt preview_url.txt || true
+            else
+              echo "Fallback prebuilt deploy succeeded"
+              tail -n 50 preview_url_root.txt || true
+              mv preview_url_root.txt preview_url.txt || true
+            fi
           else
             popd || true
           fi
