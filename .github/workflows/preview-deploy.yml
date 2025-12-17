@@ -22,7 +22,15 @@ jobs:
       - name: Install pnpm
         run: npm i -g pnpm@latest
       - name: Install
-        run: pnpm install --no-frozen-lockfile
+        run: |
+          set -euo pipefail
+          echo "Attempting pnpm install with --frozen-lockfile (preferred)"
+          if pnpm install --frozen-lockfile; then
+            echo "pnpm install succeeded with frozen-lockfile"
+          else
+            echo "Frozen-lockfile install failed; retrying with --no-frozen-lockfile"
+            pnpm install --no-frozen-lockfile
+          fi
       - name: Build
         run: pnpm turbo build --filter=@hq-operations/web
       - name: Deploy Preview to Vercel
